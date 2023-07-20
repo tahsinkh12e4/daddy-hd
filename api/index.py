@@ -1,85 +1,80 @@
-from flask import Flask, request, make_response
-from urllib.parse import urlparse, urlunparse
+from flask import Flask,request,make_response
 import requests
-import re
+import os
 
 app = Flask(__name__)
-headers = {"Referer": "https://ntuplay.xyz/"}
-headers2 = {"Referer": "https://millionscast.com/"}
+headers={
 
-def get_base_url(url):
-    parsed_url = urlparse(url)
-    base_path = '/'.join(parsed_url.path.split('/')[:-1]) + '/'
-    base_url = urlunparse((parsed_url.scheme, parsed_url.netloc, base_path, '', '', ''))
-    return base_url
+  "Referer": "https://streamservicehd.click/",
+
+  "User-Agent": "Android"
+}
+
+headers2={
+    "documentLifecycle": "active",
+    "frameType": "sub_frame",
+    "initiator": "https://daddylivehd.sx",
+    "method": "GET",
+    "parentDocumentId": "A31153FDF25B81A4ECF22A56A82FB21C",
+    "url": "https://qwebplay.xyz/premiumtv/daddylivehd.php?id=369",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://daddylivehd.sx/stream/stream-369.php",
+    "sec-ch-ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Google Chrome\";v=\"114\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "Sec-Fetch-Dest": "iframe",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "cross-site",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+}
+
 
 @app.route("/")
 def credit():
-    return "(Daddy-API) Made With ðŸ’— By Sabbiriptv"
+    return " Made With ❤️ For DaddyLiveHD"
 
-@app.route("/api/<string:channel_id.m3u8")
-def handle_api(channel_id):
+@app.route("/auto/<string:channel_id>.m3u8")
+def handle_auto(channel_id):
+    url=f"https://webudit.cdnhks.lol/lb/premium{channel_id}/index.m3u8"
+    res=requests.head(url,headers=headers).headers
+    link=res['location']
+   
+    link=link.replace("playlist.m3u8","tracks-v1a1/")
+    print(link)
+    res=requests.get(link+"mono.m3u8",headers=headers).text
+    print(res)
     
-    source_code = requests.get(f"https://daddylivehd.sx/embed/stream-{channel_id}.php").text 
-    regex = r"source:\s*['\"](.*?)['\"]"
-    match = re.search(regex, source_code)
-
-    if match and match.group(1):
-        url = match.group(1)
-    response = requests.get(url, headers=headers)
-    response_lines = response.text.splitlines()
-    for index, line in enumerate(response_lines):
+ 
+   
+    ara=res.splitlines()
+    for i,line in enumerate(ara):
         if ".ts" in line:
-            response_lines[index] = "/ts?id=" + line + f"&base={get_base_url(url)}"
-
-    response = make_response("\n".join(response_lines))
-    response.headers["Content-Type"] = "application/vnd.apple.mpegurl"
-    return response
-
+            ara[i]="/ts?id="+line+"&base="+link
+    
+    return "\n".join(ara)
+   
 @app.route("/ts")
 def handle_ts():
-    ts_id = request.args["id"]
-    base = request.args["base"]
-    response = requests.get(base + ts_id, headers=headers)
-    myresponse = make_response(response.content)
-    myresponse.headers["Content-Type"] = "video/mp2t"
-    return myresponse
+    ts_id = request.args.get("id")    
+    base = request.args.get("base")  
+    # base = request.args["base"]
 
-# ----------------
-
-@app.route("/api-v2")
-def handle_api2(channel_id):
     
-    response = requests.get(f"https://millionscast.com/crichdwas.php?player=desktop&live={channel_id}", headers={"Referer": "https://stream.crichd.vip/"})
+    response = requests.get(base + ts_id,headers=headers)
+    print(response)
+    
+    return response.content
+   
+  
 
-    match_string = "return("
-    if "return(" not in response.text:
-        match_string = "return ("
+        
+
+    
 
 
-    first_index = response.text.find(match_string) + len(match_string)
-    last_index = response.text.find(".join")
-    link_array = eval(response.text[first_index:last_index])
-    joined = "".join(link_array)
-    final_link = joined.replace("\/\/\/\/", "//").replace("\/", "/")
-    response = requests.get(final_link, headers=headers2)
-    response_lines = response.text.splitlines()
-    for index, line in enumerate(response_lines):
-        if ".ts" in line:
-            response_lines[index] = "/ts-v2?id=" + line + "&base=" + get_base_url(final_link)
-    myresponse = make_response("\n".join(response_lines))
-    myresponse.headers["Content-Type"] = "application/vnd.apple.mpegurl"
-    return myresponse
-
-@app.route("/ts-v2")
-def handle_ts2():
-    ts_id = request.args.get("id")
-    base = request.args.get("base")
-    final = base + ts_id
-    response = requests.get(final)
-    myresponse = make_response(response.content)
-    myresponse.headers["Content-Type"] = "video/MP2T"
-    return myresponse
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=os.getenv("PORT", default=5000))
